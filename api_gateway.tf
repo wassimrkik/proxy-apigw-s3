@@ -22,7 +22,7 @@ resource "aws_api_gateway_method" "put" {
     rest_api_id = aws_api_gateway_rest_api.pdf.id
     resource_id = aws_api_gateway_resource.object.id
     http_method = "PUT"
-    authorization = "NONE"
+    authorization = "AWS_IAM"
     api_key_required = false  
 }
 
@@ -30,54 +30,72 @@ resource "aws_api_gateway_method" "get" {
     rest_api_id = aws_api_gateway_rest_api.pdf.id
     resource_id = aws_api_gateway_resource.object.id
     http_method = "GET"
-    authorization = "NONE"
+    authorization = "AWS_IAM"
     api_key_required = false  
 }
 
 resource "aws_api_gateway_integration" "S3Integration" {
   rest_api_id = aws_api_gateway_rest_api.pdf.id 
-  resource_id = aws_api_gateway_method.put.id   
+  resource_id = aws_api_gateway_resource.object.id   
   http_method = aws_api_gateway_method.put.http_method
   integration_http_method = "PUT"
   type = "AWS"
-  uri = "arn:aws:apigateway:ap-south-1:s3:path/"
-  credentials = aws_iam_role.s3_full_access_role.arn
+  uri         = "arn:aws:apigateway:ap-south-1:s3:path//"
+  credentials = aws_iam_role.s3_api_gateway_role.arn
   }
 
-resource "aws_iam_role" "s3_full_access_role" {
-  name = "s3-full-access-role"
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Action = "sts:AssumeRole",
-        Effect = "Allow",
-        Principal = {
-          Service = "apigateway.amazonaws.com" 
+  resource "aws_api_gateway_integration" "S3GetIntegration" {
+  rest_api_id = aws_api_gateway_rest_api.pdf.id 
+  resource_id = aws_api_gateway_resource.object.id   
+  http_method = aws_api_gateway_method.get.http_method
+  integration_http_method = "GET"
+  type = "AWS"
+  uri         = "arn:aws:apigateway:ap-south-1:s3:path//"
+  credentials = aws_iam_role.s3_api_gateway_role.arn
+  }
+
+resource "aws_iam_policy" "s3_policy" {
+  name        = "s3-policy"
+  description = "Policy for allowing all S3 Actions"
+
+  policy = <<EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": "s3:*",
+            "Resource": "*"
         }
-      }
     ]
-  })
+}
+EOF
 }
 
-resource "aws_iam_policy" "s3_full_access_policy" {
-  name = "s3-full-access-policy"
+# Create API Gateway Role
+resource "aws_iam_role" "s3_api_gateway_role" {
+  name = "s3-api-gateway-role"
 
-  description = "Provides full access to Amazon S3"
-
-  policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Action = "s3:*",
-        Effect = "Allow",
-        Resource = "*"
-      }
-    ]
-  })
+  # Create Trust Policy for API Gateway
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "",
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "apigateway.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+EOF
 }
 
-resource "aws_iam_role_policy_attachment" "s3_full_access_attachment" {
-  policy_arn = aws_iam_policy.s3_full_access_policy.arn
-  role       = aws_iam_role.s3_full_access_role.name
+# Attach S3 Access Policy to the API Gateway Role
+resource "aws_iam_role_policy_attachment" "s3_policy_attach" {
+  role       = aws_iam_role.s3_api_gateway_role.name
+  policy_arn = aws_iam_policy.s3_policy.arn
 }

@@ -2,8 +2,8 @@
 
 data "archive_file" "lambda" {
   type        = "zip"
-  source_file = "lambda_function.py"
-  output_path = "lambda_function_payload.zip"
+  source_file = "lambda/lambda_function.py"
+  output_path = "lambda/lambda_function_payload.zip"
 }
 
 resource "aws_lambda_function" "authorizer" {
@@ -62,7 +62,7 @@ resource "aws_iam_role" "iam_for_lambda" {
 }
 
 resource "aws_lambda_layer_version" "jwt" {
-  filename            = "p38-PyJWT.zip"
+  filename            = "libs/p38-PyJWT.zip"
   layer_name          = "p38-PyJWT"
   compatible_runtimes = ["python3.8"]
 
@@ -70,7 +70,7 @@ resource "aws_lambda_layer_version" "jwt" {
 
 
 resource "aws_lambda_layer_version" "requests" {
-  filename            = "p38-requests.zip"
+  filename            = "libs/p38-requests.zip"
   layer_name          = "p38-requests"
   compatible_runtimes = ["python3.8"]
 
@@ -78,7 +78,7 @@ resource "aws_lambda_layer_version" "requests" {
 
 
 resource "aws_lambda_layer_version" "cryptography" {
-  filename            = "p38-cryptography.zip"
+  filename            = "libs/p38-cryptography.zip"
   layer_name          = "p38-cryptography"
   compatible_runtimes = ["python3.8"]
 

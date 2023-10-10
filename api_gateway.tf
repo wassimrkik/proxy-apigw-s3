@@ -51,7 +51,7 @@ resource "aws_api_gateway_integration" "S3Integration" {
   integration_http_method = "PUT"
   type                    = "AWS"
   ##### needs credentials for s3 integration
-  uri         = "arn:aws:apigateway:${var.aws_region}:s3:path//"
+  uri         = "arn:aws:apigateway:${var.aws_region}:s3:path/{bucket}/{key}"
   credentials = aws_iam_role.s3_api_gateway_role.arn
   request_parameters = {
     ################## URL QUERY STRING PARAMETERES ###########################
@@ -69,7 +69,7 @@ resource "aws_api_gateway_integration" "S3GetIntegration" {
   http_method             = aws_api_gateway_method.get.http_method
   integration_http_method = "GET"
   type                    = "AWS"
-  uri                     = "arn:aws:apigateway:${var.aws_region}:s3:path/{bucket}/{key}"
+  uri                     = "arn:aws:apigateway:ap-south-1:s3:path/{bucket}/{key}"
   credentials             = aws_iam_role.s3_api_gateway_role.arn
   request_parameters = {
     ################## URL QUERY STRING PARAMETERES ###########################

@@ -10,7 +10,7 @@ This repository contains the IAC code for an API deployment under AWS to use as 
 ###### Auth0 custom integration
 
 ## Deployment
-git clone git@github.com:edeuae/pdf-retrieval.git \
+git clone git@github.com:edeuae/ede-service-report.git \
  retrieve AWS credentials from https://ede-cloud.awsapps.com/start/ \
  Select programmatic access \
  Configure credentials \

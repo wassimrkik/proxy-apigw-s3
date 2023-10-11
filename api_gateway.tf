@@ -22,7 +22,8 @@ resource "aws_api_gateway_method" "put" {
   rest_api_id      = aws_api_gateway_rest_api.pdf.id
   resource_id      = aws_api_gateway_resource.object.id
   http_method      = "PUT"
-  authorization    = "NONE"
+  authorization    = "CUSTOM"
+  authorizer_id    = aws_api_gateway_authorizer.demo.id
   api_key_required = false
   request_parameters = {
     "method.request.path.object" = true
@@ -34,7 +35,8 @@ resource "aws_api_gateway_method" "get" {
   rest_api_id      = aws_api_gateway_rest_api.pdf.id
   resource_id      = aws_api_gateway_resource.object.id
   http_method      = "GET"
-  authorization    = "NONE"
+  authorization    = "CUSTOM"
+  authorizer_id    = aws_api_gateway_authorizer.demo.id
   api_key_required = false
   request_parameters = {
     "method.request.path.object" = true
@@ -50,15 +52,15 @@ resource "aws_api_gateway_integration" "S3Integration" {
   integration_http_method = "PUT"
   type                    = "AWS"
   ##### needs credentials for s3 integration
-  uri                     = "arn:aws:apigateway:${var.aws_region}:s3:path/{bucket}/{key}"
-  credentials             = aws_iam_role.s3_api_gateway_role.arn
+  uri         = "arn:aws:apigateway:${var.aws_region}:s3:path/{bucket}/{key}"
+  credentials = aws_iam_role.s3_api_gateway_role.arn
   request_parameters = {
     ################## URL QUERY STRING PARAMETERES ###########################
     # "integration.request.querystring.key" = "method.request.querystring.object"
     # "integration.request.querystring.bucket" = "method.request.querystring.folder"
     ################## URL PATH PARAMETER PARAMETERES ###########################
     "integration.request.path.bucket" = "method.request.path.folder"
-    "integration.request.path.key" = "method.request.path.object"
+    "integration.request.path.key"    = "method.request.path.object"
   }
 }
 
@@ -68,7 +70,7 @@ resource "aws_api_gateway_integration" "S3GetIntegration" {
   http_method             = aws_api_gateway_method.get.http_method
   integration_http_method = "GET"
   type                    = "AWS"
-  uri                     = "arn:aws:apigateway:${var.aws_region}:s3:path/{bucket}/{key}"
+  uri                     = "arn:aws:apigateway:ap-south-1:s3:path/{bucket}/{key}"
   credentials             = aws_iam_role.s3_api_gateway_role.arn
   request_parameters = {
     ################## URL QUERY STRING PARAMETERES ###########################
@@ -76,7 +78,7 @@ resource "aws_api_gateway_integration" "S3GetIntegration" {
     # "integration.request.querystring.bucket" = "method.request.querystring.folder"
     ################## URL PATH PARAMETER PARAMETERES ###########################
     "integration.request.path.bucket" = "method.request.path.folder"
-    "integration.request.path.key" = "method.request.path.object"
+    "integration.request.path.key"    = "method.request.path.object"
   }
 }
 
@@ -100,45 +102,60 @@ resource "aws_api_gateway_deployment" "S3APIDeployment" {
 
 
 resource "aws_api_gateway_method_response" "get_response" {
-    rest_api_id = aws_api_gateway_rest_api.pdf.id  
-    resource_id = aws_api_gateway_resource.object.id
-    http_method = aws_api_gateway_method.get.http_method
-    status_code = "200"
-    response_parameters = {
-    "method.response.header.content-Type"   = true
+  rest_api_id = aws_api_gateway_rest_api.pdf.id
+  resource_id = aws_api_gateway_resource.object.id
+  http_method = aws_api_gateway_method.get.http_method
+  status_code = "200"
+  response_parameters = {
+    "method.response.header.content-Type" = true
   }
-    response_models = {
+  response_models = {
     "application/json" = "Empty"
-  }  
-  
+  }
+
 }
 
 resource "aws_api_gateway_integration_response" "get_int_response" {
-  rest_api_id = aws_api_gateway_rest_api.pdf.id  
-  resource_id = aws_api_gateway_resource.object.id  
+  rest_api_id = aws_api_gateway_rest_api.pdf.id
+  resource_id = aws_api_gateway_resource.object.id
   http_method = aws_api_gateway_method.get.http_method
   status_code = aws_api_gateway_method_response.get_response.status_code
   response_parameters = {
-    "method.response.header.content-Type"   = "'application/pdf'"
+    "method.response.header.content-Type" = "'application/pdf'"
   }
 
 }
 
 resource "aws_api_gateway_method_response" "put_response" {
-    rest_api_id = aws_api_gateway_rest_api.pdf.id  
-    resource_id = aws_api_gateway_resource.object.id
-    http_method = aws_api_gateway_method.put.http_method
-    status_code = "200"
-    response_models = {
+  rest_api_id = aws_api_gateway_rest_api.pdf.id
+  resource_id = aws_api_gateway_resource.object.id
+  http_method = aws_api_gateway_method.put.http_method
+  status_code = "200"
+  response_models = {
     "application/json" = "Empty"
-  }  
-  
+  }
+
 }
 
 resource "aws_api_gateway_integration_response" "put_int_response" {
-  rest_api_id = aws_api_gateway_rest_api.pdf.id  
-  resource_id = aws_api_gateway_resource.object.id  
+  rest_api_id = aws_api_gateway_rest_api.pdf.id
+  resource_id = aws_api_gateway_resource.object.id
   http_method = aws_api_gateway_method.put.http_method
   status_code = aws_api_gateway_method_response.put_response.status_code
 
+}
+
+resource "aws_api_gateway_authorizer" "demo" {
+  name                   = "jwt_auth0"
+  rest_api_id            = aws_api_gateway_rest_api.pdf.id
+  authorizer_uri         = aws_lambda_function.authorizer.invoke_arn
+  type = "TOKEN"
+}
+
+resource "aws_lambda_permission" "apigw_lambda_authorizer" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.authorizer.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "arn:aws:execute-api:${local.aws_region_name}:${local.aws_account_id}:${aws_api_gateway_rest_api.pdf.id}/authorizers/${aws_api_gateway_authorizer.demo.id}"
 }

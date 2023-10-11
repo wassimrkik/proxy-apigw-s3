@@ -22,7 +22,8 @@ resource "aws_api_gateway_method" "put" {
   rest_api_id      = aws_api_gateway_rest_api.pdf.id
   resource_id      = aws_api_gateway_resource.object.id
   http_method      = "PUT"
-  authorization    = "NONE"
+  authorization    = "CUSTOM"
+  authorizer_id    = aws_api_gateway_authorizer.demo.id
   api_key_required = false
   request_parameters = {
     "method.request.path.object" = true
@@ -145,7 +146,7 @@ resource "aws_api_gateway_integration_response" "put_int_response" {
 }
 
 resource "aws_api_gateway_authorizer" "demo" {
-  name                   = "demo"
+  name                   = "jwt_auth0"
   rest_api_id            = aws_api_gateway_rest_api.pdf.id
   authorizer_uri         = aws_lambda_function.authorizer.invoke_arn
   type = "TOKEN"
